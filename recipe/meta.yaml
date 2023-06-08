@@ -100,6 +100,7 @@ outputs:
         - {{ pin_subpackage("libnvinfer", exact=True) }}
     files:
       - lib/lib*blas*.so   # [linux]
+      - include            # [linux]
       - Library\include    # [win]
       - Library\lib        # [win]
     requirements:
