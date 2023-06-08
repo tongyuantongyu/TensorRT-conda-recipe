@@ -1,0 +1,203 @@
+{% set version = "8.6.1.6" %}
+{% set cuda_major = (cuda_version|default("12.0.0")).split(".")[0] %}
+
+package:
+  name: tensorrt
+  version: {{ version }}
+
+source:
+  - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Windows10.x86_64.cuda-{{ cuda_version }}.zip     # [win]
+    sha256: 1d24714f577de906688cf7706c47c8b13d3a30470927def896a36843119bcb3e                                   # [win and cuda_major == "11"]
+    sha256: 1fc0cdd50eccab806a62774db7681e4f6e1598323a90734468dbe5a91e4543c9                                   # [win and cuda_major == "12"]
+  - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
+    sha256: 15bfe6053d45feec45ecc7123a9106076b0b43fa0435f242d89dca0778337759                                   # [linux and cuda_major == "11"]
+    sha256: 0f8157a5fc5329943b338b893591373350afa90ca81239cdadd7580cd1eba254                                   # [linux and cuda_major == "12"]
+  - url: https://docs.nvidia.com/deeplearning/tensorrt/pdf/TensorRT-SLA.pdf
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX/lib                                     # [linux]
+    - cp targets/x86_64-linux-gnu/lib/libnv*.so* $PREFIX/lib/  # [linux]
+    - cp targets/x86_64-linux-gnu/lib/libnv*.a $PREFIX/lib/    # [linux]
+    - cp -r targets/x86_64-linux-gnu/lib/stubs $PREFIX/lib/    # [linux]
+    - mkdir %LIBRARY_BIN%                                      # [win]
+    - copy %SRC_DIR%\\lib\\*.dll %LIBRARY_BIN%\\               # [win]
+
+    - mkdir -p $PREFIX/include                      # [linux]
+    - cp include/*.h $PREFIX/include/               # [linux]
+    - mkdir %LIBRARY_INC%                           # [win]
+    - copy %SRC_DIR%\\include\\*.h %LIBRARY_INC%\\  # [win]
+    - mkdir %LIBRARY_LIB%                           # [win]
+    - copy %SRC_DIR%\\lib\\*.lib %LIBRARY_LIB%\\    # [win]
+
+test:
+  commands:
+    - if not exist %LIBRARY_BIN%/nvinfer.dll exit 1         # [win]
+    - if not exist %LIBRARY_BIN%/nvinfer_plugin.dll exit 1  # [win]
+    - if not exist %LIBRARY_BIN%/nvonnxparser.dll exit 1    # [win]
+    - test -f $PREFIX/lib/libnvinfer.so                     # [linux]
+    - test -f $PREFIX/lib/libnvinfer_plugin.so              # [linux]
+    - test -f $PREFIX/lib/libnvonnxparser.so                # [linux]
+    - if not exist %LIBRARY_INC%/NvInfer.h exit 1           # [win]
+    - if not exist %LIBRARY_INC%/NvOnnxParser.h exit 1      # [win]
+    - if not exist %LIBRARY_LIB%/nvinfer.lib exit 1         # [win]
+    - if not exist %LIBRARY_LIB%/nvonnxparser.lib exit 1    # [win]
+    - test -f $PREFIX/include/NvInfer.h                     # [linux]
+    - test -f $PREFIX/include/NvOnnxParser.h                # [linux]
+
+outputs:
+  - name: libnvinfer
+    files:
+      - lib/libnv*.so.*      # [linux]
+      - Library\bin\nv*.dll  # [win]
+    requirements:
+      build:
+        - {{ compiler("c") }}
+        - {{ compiler("cxx") }}
+      host:
+        - cuda-version {{ cuda_version }}
+        {% if cuda_major == "11" %}
+        - cudatoolkit 11.*
+        {% else %}
+        - cuda-nvrtc
+        - libcublas
+        {% endif %}
+        - cudnn >=8.8
+      run:
+        - {{ pin_compatible("cuda-version", max_pin="x") }}
+        {% if cuda_major == "11" %}
+        - cudatoolkit 11.*
+        {% else %}
+        - cuda-nvrtc
+        - libcublas
+        {% endif %}
+        - cudnn >=8.8
+    about:
+      home: https://developer.nvidia.com/tensorrt
+      license: LicenseRef-TensorRT-Software-License-Agreement
+      license_file: TensorRT-SLA.pdf
+      license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      prelink_message:
+        - message-runtime.txt
+      summary: "NVIDIA's TensorRT deep neural network inference library"
+      description: |
+        NVIDIA® TensorRT™ is an SDK for optimizing-trained deep learning models
+        to enable high-performance inference. TensorRT contains a deep learning
+        inference optimizer for trained deep learning models, and a runtime for
+        execution.
+
+        License Agreements:- The packages are governed by the NVIDIA TensorRT
+        Software License Agreement (EULA). By downloading and using the packages,
+        you accept the terms and conditions of the NVIDIA TensorRT EULA -
+        https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      doc_url: https://docs.nvidia.com/deeplearning/tensorrt/
+      dev_url: https://developer.nvidia.com/nvidia-tensorrt-download
+
+  - name: libnvinfer-dev
+    build:
+      run_exports:
+        - {{ pin_subpackage("libnvinfer", exact=True) }}
+    files:
+      - lib/lib*blas*.so   # [linux]
+      - Library\include    # [win]
+      - Library\lib        # [win]
+    requirements:
+      build:
+        - {{ compiler("c") }}
+        - {{ compiler("cxx") }}
+      host:
+        - cuda-version {{ cuda_version }}
+      run:
+        - {{ pin_compatible("cuda-version", max_pin="x") }}
+        - {{ pin_subpackage("libnvinfer", exact=True) }}
+      run_constrained:
+        - libnvinfer-static >={{ version }}      # [linux]
+    about:
+      home: https://developer.nvidia.com/tensorrt
+      license: LicenseRef-TensorRT-Software-License-Agreement
+      license_file: TensorRT-SLA.pdf
+      license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      prelink_message:
+        - message-dev.txt
+      summary: "NVIDIA's TensorRT deep neural network inference library"
+      description: |
+        PLEASE IMFORM ME TO DELETE THIS PACKAGE.
+
+        This is the SDK package that contains files necessary for build
+        but can not be distributed as per EULA.
+
+        NVIDIA® TensorRT™ is an SDK for optimizing-trained deep learning models
+        to enable high-performance inference. TensorRT contains a deep learning
+        inference optimizer for trained deep learning models, and a runtime for
+        execution.
+
+        License Agreements:- The packages are governed by the NVIDIA TensorRT
+        Software License Agreement (EULA). By downloading and using the packages,
+        you accept the terms and conditions of the NVIDIA TensorRT EULA -
+        https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      doc_url: https://docs.nvidia.com/deeplearning/tensorrt/
+      dev_url: https://developer.nvidia.com/nvidia-tensorrt-download
+
+  - name: libnvinfer-static
+    build:
+      skip: True  # [not linux]
+    files:
+      - lib/libnv*.a
+      - lib/stubs
+    requirements:
+      build:
+        - {{ compiler("c") }}
+        - {{ compiler("cxx") }}
+      host:
+        - cuda-version {{ cuda_version }}
+      run:
+        - {{ pin_compatible("cuda-version", max_pin="x") }}
+    about:
+      home: https://developer.nvidia.com/tensorrt
+      license: LicenseRef-TensorRT-Software-License-Agreement
+      license_file: TensorRT-SLA.pdf
+      license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      prelink_message:
+        - message-dev.txt
+      summary: "NVIDIA's TensorRT deep neural network inference library"
+      description: |
+        PLEASE IMFORM ME TO DELETE THIS PACKAGE.
+
+        This is the SDK package that contains files necessary for build
+        but can not be distributed as per EULA.
+
+        NVIDIA® TensorRT™ is an SDK for optimizing-trained deep learning models
+        to enable high-performance inference. TensorRT contains a deep learning
+        inference optimizer for trained deep learning models, and a runtime for
+        execution.
+
+        License Agreements:- The packages are governed by the NVIDIA TensorRT
+        Software License Agreement (EULA). By downloading and using the packages,
+        you accept the terms and conditions of the NVIDIA TensorRT EULA -
+        https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      doc_url: https://docs.nvidia.com/deeplearning/tensorrt/
+      dev_url: https://developer.nvidia.com/nvidia-tensorrt-download
+
+about:
+  home: https://developer.nvidia.com/tensorrt
+  license: LicenseRef-TensorRT-Software-License-Agreement
+  license_file: TensorRT-SLA.pdf
+  license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+  summary: "NVIDIA's TensorRT deep neural network inference library"
+  description: |
+    NVIDIA® TensorRT™ is an SDK for optimizing-trained deep learning models
+    to enable high-performance inference. TensorRT contains a deep learning
+    inference optimizer for trained deep learning models, and a runtime for
+    execution.
+
+    License Agreements:- The packages are governed by the NVIDIA TensorRT
+    Software License Agreement (EULA). By downloading and using the packages,
+    you accept the terms and conditions of the NVIDIA TensorRT EULA -
+    https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+  doc_url: https://docs.nvidia.com/deeplearning/tensorrt/
+  dev_url: https://developer.nvidia.com/nvidia-tensorrt-download
+
+extra:
+  recipe-maintainers:
+    - tongyuantongyu
