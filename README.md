@@ -24,6 +24,9 @@ Do to license issue, the development package `libnvinfer-dev` is not available f
 
 To build TensorRT conda package, first set up `conda-build` following the [Getting started](https://docs.conda.io/projects/conda-build/en/stable/user-guide/getting-started.html) guide.
 
+TensorRT depends on packages from `conda-forge` channel. Following the [`conda-forge` documentation](https://conda-forge.org/docs/user/introduction.html#how-can-i-install-packages-from-conda-forge) to
+set up `conda-forge` channel.
+
 ### Clone repository
 
 Clone this repository.
@@ -42,3 +45,5 @@ conda build <path-to-cloned-repository>
 ```
 
 The build process will take a while. After it finished, you will have `libnvinfer` and `libnvinfer-dev` (and `libnvinfer-static` on Linux) in your `local` conda channel. `libnvinfer-dev` and `libnvinfer-static` are not distributable.
+
+Currently `cuDNN` dependency do not have CUDA 12 variant for Windows built on `conda-forge`, due to CI support missing. Until it is fixed, you can add `-c tongyuantongyu` to the build command line, to get CUDA 12 variant of `cuDNN` from my channel.

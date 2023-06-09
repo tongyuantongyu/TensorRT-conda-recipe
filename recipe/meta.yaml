@@ -7,20 +7,18 @@ package:
 
 source:
   - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Windows10.x86_64.cuda-{{ cuda_version }}.zip     # [win]
-    sha256: 1d24714f577de906688cf7706c47c8b13d3a30470927def896a36843119bcb3e                                   # [win and cuda_major == "11"]
-    sha256: 1fc0cdd50eccab806a62774db7681e4f6e1598323a90734468dbe5a91e4543c9                                   # [win and cuda_major == "12"]
+    sha256: 1d24714f577de906688cf7706c47c8b13d3a30470927def896a36843119bcb3e                                   # [win and cuda_version == "11.8"]
+    sha256: 1fc0cdd50eccab806a62774db7681e4f6e1598323a90734468dbe5a91e4543c9                                   # [win and cuda_version == "12.0"]
   - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
-    sha256: 15bfe6053d45feec45ecc7123a9106076b0b43fa0435f242d89dca0778337759                                   # [linux and cuda_major == "11"]
-    sha256: 0f8157a5fc5329943b338b893591373350afa90ca81239cdadd7580cd1eba254                                   # [linux and cuda_major == "12"]
+    sha256: 15bfe6053d45feec45ecc7123a9106076b0b43fa0435f242d89dca0778337759                                   # [linux and cuda_version == "11.8"]
+    sha256: 0f8157a5fc5329943b338b893591373350afa90ca81239cdadd7580cd1eba254                                   # [linux and cuda_version == "12.0"]
   - url: https://docs.nvidia.com/deeplearning/tensorrt/pdf/TensorRT-SLA.pdf
 
 build:
   number: 0
   script:
     - mkdir -p $PREFIX/lib                                     # [linux]
-    - cp targets/x86_64-linux-gnu/lib/libnv*.so* $PREFIX/lib/  # [linux]
-    - cp targets/x86_64-linux-gnu/lib/libnv*.a $PREFIX/lib/    # [linux]
-    - cp -r targets/x86_64-linux-gnu/lib/stubs $PREFIX/lib/    # [linux]
+    - cp -r targets/x86_64-linux-gnu/lib/* $PREFIX/lib/        # [linux]
     - mkdir %LIBRARY_BIN%                                      # [win]
     - copy %SRC_DIR%\\lib\\*.dll %LIBRARY_BIN%\\               # [win]
 
@@ -49,8 +47,13 @@ test:
 outputs:
   - name: libnvinfer
     files:
-      - lib/libnv*.so.*      # [linux]
-      - Library\bin\nv*.dll  # [win]
+      - lib/libnvcaffe_parser.so.*  # [linux]
+      - lib/libnvinfer*.so.*        # [linux]
+      - lib/libnvonnxparser.so.*    # [linux]
+      - lib/libnvparsers.so.*       # [linux]
+      - Library\bin\nvinfer*.dll       # [win]
+      - Library\bin\nvonnxparser.dll   # [win]
+      - Library\bin\nvparser.dll       # [win]
     requirements:
       build:
         - {{ compiler("c") }}
@@ -99,8 +102,11 @@ outputs:
       run_exports:
         - {{ pin_subpackage("libnvinfer", exact=True) }}
     files:
-      - lib/lib*blas*.so   # [linux]
-      - include            # [linux]
+      - lib/libnvcaffe_parser.so  # [linux]
+      - lib/libnvinfer*.so        # [linux]
+      - lib/libnvonnxparser.so    # [linux]
+      - lib/libnvparsers.so       # [linux]
+      - include                   # [linux]
       - Library\include    # [win]
       - Library\lib        # [win]
     requirements:
@@ -144,7 +150,11 @@ outputs:
     build:
       skip: True  # [not linux]
     files:
-      - lib/libnv*.a
+      - lib/libnvcaffe_parser.a
+      - lib/libnvinfer*.a
+      - lib/libnvonnxparser_static.a
+      - lib/libnvparsers_static.a
+      - lib/libonnx_proto.a
       - lib/stubs
     requirements:
       build:
