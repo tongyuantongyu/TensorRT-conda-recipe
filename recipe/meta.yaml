@@ -1,5 +1,6 @@
 {% set version = "8.6.1.6" %}
-{% set cuda_major = (cuda_version|default("12.0.0")).split(".")[0] %}
+{% set cuda_major = (cuda_version|default("12.0")).split(".")[0] %}
+{% set version_first_three = ".".join(version.split(".")[:3]) %}
 {% set version_joined = "".join(version.split(".")[:3]) %}
 
 package:
@@ -7,17 +8,17 @@ package:
   version: {{ version }}
 
 source:
-  - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Windows10.x86_64.cuda-{{ cuda_version }}.zip     # [win]
+  - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/{{ version_first_three }}/zip/TensorRT-{{ version }}.Windows10.x86_64.cuda-{{ cuda_version }}.zip     # [win]
     sha256: 1d24714f577de906688cf7706c47c8b13d3a30470927def896a36843119bcb3e                                   # [win and cuda_version == "11.8"]
     sha256: 1fc0cdd50eccab806a62774db7681e4f6e1598323a90734468dbe5a91e4543c9                                   # [win and cuda_version == "12.0"]
-  - url: file:///{{RECIPE_DIR}}/../src/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
+  - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/{{ version_first_three }}/tars/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
     sha256: 15bfe6053d45feec45ecc7123a9106076b0b43fa0435f242d89dca0778337759                                   # [linux and cuda_version == "11.8"]
     sha256: 0f8157a5fc5329943b338b893591373350afa90ca81239cdadd7580cd1eba254                                   # [linux and cuda_version == "12.0"]
   - url: https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-{{ version_joined }}/pdf/TensorRT-SLA.pdf
     sha256: 2c6035174e8757a116e6cbd6942c444e2c091bb21ddae803a4c3f7122ce3fc7f
 
 build:
-  number: 0
+  number: 1
   script:
     - mkdir -p $PREFIX/lib                                     # [linux]
     - cp -r targets/x86_64-linux-gnu/lib/* $PREFIX/lib/        # [linux]
@@ -65,7 +66,6 @@ outputs:
         {% if cuda_major == "11" %}
         - cudatoolkit 11.*
         {% else %}
-        - cuda-nvrtc
         - libcublas
         {% endif %}
         - cudnn >=8.8
@@ -74,14 +74,15 @@ outputs:
         {% if cuda_major == "11" %}
         - cudatoolkit 11.*
         {% else %}
-        - cuda-nvrtc
         - libcublas
         {% endif %}
         - cudnn >=8.8
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
-      license_file: TensorRT-SLA.pdf
+      license_file:
+        - TensorRT-SLA.pdf
+        - doc/Acknowledgements.txt
       license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
       summary: "NVIDIA's TensorRT deep neural network inference library"
       description: |
@@ -123,7 +124,9 @@ outputs:
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
-      license_file: TensorRT-SLA.pdf
+      license_file:
+        - TensorRT-SLA.pdf
+        - doc/Acknowledgements.txt
       license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
       summary: "NVIDIA's TensorRT deep neural network inference library"
       description: |
@@ -165,7 +168,9 @@ outputs:
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
-      license_file: TensorRT-SLA.pdf
+      license_file:
+        - TensorRT-SLA.pdf
+        - doc/Acknowledgements.txt
       license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
       summary: "NVIDIA's TensorRT deep neural network inference library"
       description: |
@@ -189,7 +194,9 @@ outputs:
 about:
   home: https://developer.nvidia.com/tensorrt
   license: LicenseRef-TensorRT-Software-License-Agreement
-  license_file: TensorRT-SLA.pdf
+  license_file:
+    - TensorRT-SLA.pdf
+    - doc/Acknowledgements.txt
   license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
   summary: "NVIDIA's TensorRT deep neural network inference library"
   description: |

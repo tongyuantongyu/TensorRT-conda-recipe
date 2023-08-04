@@ -31,11 +31,6 @@ set up `conda-forge` channel.
 
 Clone this repository.
 
-### Download TensorRT archive
-
-TensorRT does not provide public redistribution. You need to download TensorRT from its [website](https://developer.nvidia.com/nvidia-tensorrt-8x-download)
-with your developer account. This recipe currently targets version 8.6 GA (`8.6.1.6`). Download the TAR Packages for Linux or ZIP Packages for Windows, and place the downloaded archive files into `src` folder in the repository.
-
 ### Run build
 
 Run the following command to start build process.
