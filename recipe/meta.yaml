@@ -1,29 +1,36 @@
-{% set version = "8.6.1.6" %}
+{% set version = "10.0.1.6" %}
+{% set build = 0 %}
 {% set cuda_major = (cuda_version|default("12.0")).split(".")[0] %}
 {% set version_first_three = ".".join(version.split(".")[:3]) %}
-{% set version_joined = "".join(version.split(".")[:3]) %}
+{% set version_major = version.split(".")[0] %}
+{% set version_patch = version.split(".")[2] %}
+{% set version_sla = "".join(version.split(".")[:3]) + ("-ea" if version_patch == "0" else "") %}
 
 package:
   name: tensorrt
   version: {{ version }}
 
 source:
-  - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/{{ version_first_three }}/zip/TensorRT-{{ version }}.Windows10.x86_64.cuda-{{ cuda_version }}.zip     # [win]
-    sha256: 1d24714f577de906688cf7706c47c8b13d3a30470927def896a36843119bcb3e                                   # [win and cuda_version == "11.8"]
-    sha256: 1fc0cdd50eccab806a62774db7681e4f6e1598323a90734468dbe5a91e4543c9                                   # [win and cuda_version == "12.0"]
-  - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/secure/{{ version_first_three }}/tars/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
-    sha256: 15bfe6053d45feec45ecc7123a9106076b0b43fa0435f242d89dca0778337759                                   # [linux and cuda_version == "11.8"]
-    sha256: 0f8157a5fc5329943b338b893591373350afa90ca81239cdadd7580cd1eba254                                   # [linux and cuda_version == "12.0"]
-  - url: https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-{{ version_joined }}/pdf/TensorRT-SLA.pdf
-    sha256: 2c6035174e8757a116e6cbd6942c444e2c091bb21ddae803a4c3f7122ce3fc7f
+  - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/{{ version_first_three }}/zip/TensorRT-{{ version }}.Windows10.win10.cuda-{{ cuda_version }}.zip      # [win]
+    sha256: 1f6ab09315017d5d8aeb21c8dc33391c175d70b106262c456807f114bb40ef5b                                   # [win and cuda_version == "11.8"]
+    sha256: d667bd10b178e239b621a8929008ef3e27967d181bf07a39845a0f99edeec47a                                   # [win and cuda_version == "12.4"]
+  - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/{{ version_first_three }}/tars/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
+    sha256: 5a42364ee9ac80a76f540da8b22358ab28ff456c60bd0428f9020fe0dc0f7e32                                   # [linux and cuda_version == "11.8"]
+    sha256: a5cd2863793d69187ce4c73b2fffc1f470ff28cfd91e3640017e53b8916453d5                                   # [linux and cuda_version == "12.4"]
+  - url: https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-{{ version_sla }}/pdf/TensorRT-SLA.pdf
+    sha256: 22736f54f82434849e8218ed40421de2b7efa1800c2e7faf5f9aac1930f53688
 
 build:
-  number: 1
+  number: {{ build }}
+  string: cuda{{ cuda_version | replace('.', '') }}_{{ PKG_BUILDNUM }}
   script:
     - mkdir -p $PREFIX/lib                                     # [linux]
     - cp -r targets/x86_64-linux-gnu/lib/* $PREFIX/lib/        # [linux]
+    - mkdir -p $PREFIX/bin                                     # [linux]
+    - cp bin/trtexec $PREFIX/bin/                              # [linux]
     - mkdir %LIBRARY_BIN%                                      # [win]
     - copy %SRC_DIR%\\lib\\*.dll %LIBRARY_BIN%\\               # [win]
+    - copy %SRC_DIR%\\bin\\trtexec.exe %LIBRARY_BIN%\\         # [win]
 
     - mkdir -p $PREFIX/include                      # [linux]
     - cp include/*.h $PREFIX/include/               # [linux]
@@ -34,12 +41,14 @@ build:
 
 test:
   commands:
-    - if not exist %LIBRARY_BIN%/nvinfer.dll exit 1         # [win]
-    - if not exist %LIBRARY_BIN%/nvinfer_plugin.dll exit 1  # [win]
-    - if not exist %LIBRARY_BIN%/nvonnxparser.dll exit 1    # [win]
+    - if not exist %LIBRARY_BIN%/nvinfer_{{ version_major }}.dll exit 1         # [win]
+    - if not exist %LIBRARY_BIN%/nvinfer_plugin_{{ version_major }}.dll exit 1  # [win]
+    - if not exist %LIBRARY_BIN%/nvonnxparser_{{ version_major }}.dll exit 1    # [win]
+    - if not exist %LIBRARY_BIN%/trtexec.exe exit 1                             # [win]
     - test -f $PREFIX/lib/libnvinfer.so                     # [linux]
     - test -f $PREFIX/lib/libnvinfer_plugin.so              # [linux]
     - test -f $PREFIX/lib/libnvonnxparser.so                # [linux]
+    - test -f $PREFIX/bin/trtexec                           # [linux]
     - if not exist %LIBRARY_INC%/NvInfer.h exit 1           # [win]
     - if not exist %LIBRARY_INC%/NvOnnxParser.h exit 1      # [win]
     - if not exist %LIBRARY_LIB%/nvinfer.lib exit 1         # [win]
@@ -50,13 +59,12 @@ test:
 outputs:
   - name: libnvinfer
     files:
-      - lib/libnvcaffe_parser.so.*  # [linux]
-      - lib/libnvinfer*.so.*        # [linux]
-      - lib/libnvonnxparser.so.*    # [linux]
-      - lib/libnvparsers.so.*       # [linux]
-      - Library\bin\nvinfer*.dll       # [win]
-      - Library\bin\nvonnxparser.dll   # [win]
-      - Library\bin\nvparser.dll       # [win]
+      - lib/libnvinfer*.so.{{ version_first_three }}        # [linux]
+      - lib/libnvonnxparser.so.{{ version_first_three }}    # [linux]
+      - lib/libnvinfer*.so.{{ version_major }}              # [linux]
+      - lib/libnvonnxparser.so.{{ version_major }}          # [linux]
+      - Library\bin\nvinfer*_{{ version_major }}.dll        # [win]
+      - Library\bin\nvonnxparser_{{ version_major }}.dll    # [win]
     requirements:
       build:
         - {{ compiler("c") }}
@@ -65,18 +73,12 @@ outputs:
         - cuda-version {{ cuda_version }}
         {% if cuda_major == "11" %}
         - cudatoolkit 11.*
-        {% else %}
-        - libcublas
         {% endif %}
-        - cudnn >=8.8
       run:
-        - {{ pin_compatible("cuda-version", max_pin="x") }}
+        - cuda-version  {{ cuda_major }}.*
         {% if cuda_major == "11" %}
         - cudatoolkit 11.*
-        {% else %}
-        - libcublas
         {% endif %}
-        - cudnn >=8.8
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
@@ -100,14 +102,15 @@ outputs:
 
   - name: libnvinfer-dev
     build:
+      number: {{ build }}
+      string: cuda{{ cuda_version | replace('.', '') }}_{{ PKG_BUILDNUM }}
       run_exports:
         - {{ pin_subpackage("libnvinfer", exact=True) }}
     files:
-      - lib/libnvcaffe_parser.so  # [linux]
+      - include                   # [linux]
+      - lib/stubs                 # [linux]
       - lib/libnvinfer*.so        # [linux]
       - lib/libnvonnxparser.so    # [linux]
-      - lib/libnvparsers.so       # [linux]
-      - include                   # [linux]
       - Library\include    # [win]
       - Library\lib        # [win]
     requirements:
@@ -116,11 +119,58 @@ outputs:
         - {{ compiler("cxx") }}
       host:
         - cuda-version {{ cuda_version }}
+        {% if cuda_major == "11" %}
+        - cudatoolkit 11.*
+        {% endif %}
       run:
-        - {{ pin_compatible("cuda-version", max_pin="x") }}
+        - cuda-version  {{ cuda_major }}.*
         - {{ pin_subpackage("libnvinfer", exact=True) }}
       run_constrained:
-        - libnvinfer-static >={{ version }}      # [linux]
+        - {{ pin_subpackage("libnvinfer-static", exact=True) }}      # [linux]
+    about:
+      home: https://developer.nvidia.com/tensorrt
+      license: LicenseRef-TensorRT-Software-License-Agreement
+      license_file:
+        - TensorRT-SLA.pdf
+        - doc/Acknowledgements.txt
+      license_url: https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      summary: "NVIDIA's TensorRT deep neural network inference library"
+      description: |
+        PLEASE IMFORM ME TO DELETE THIS PACKAGE.
+
+        This is the SDK package that contains files necessary for build
+        but can not be distributed as per EULA.
+
+        NVIDIA® TensorRT™ is an SDK for optimizing-trained deep learning models
+        to enable high-performance inference. TensorRT contains a deep learning
+        inference optimizer for trained deep learning models, and a runtime for
+        execution.
+
+        License Agreements:- The packages are governed by the NVIDIA TensorRT
+        Software License Agreement (EULA). By downloading and using the packages,
+        you accept the terms and conditions of the NVIDIA TensorRT EULA -
+        https://docs.nvidia.com/deeplearning/tensorrt/sla/index.html
+      doc_url: https://docs.nvidia.com/deeplearning/tensorrt/
+      dev_url: https://developer.nvidia.com/nvidia-tensorrt-download
+
+  - name: libnvinfer-tools
+    files:
+      - bin/trtexec               # [linux]
+      - Library\bin\trtexec.exe   # [win]
+    requirements:
+      host:
+        - cuda-version {{ cuda_version }}
+        {% if cuda_major == "11" %}
+        - cudatoolkit 11.*
+        {% endif %}
+      run:
+        - cuda-version  {{ cuda_major }}.*
+        - {{ pin_subpackage("libnvinfer", exact=True) }}
+        {% if cuda_major == "11" %}
+        - cudatoolkit 11.*
+        {% else %}
+        - cuda-cudart
+        {% endif %}
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
@@ -149,14 +199,12 @@ outputs:
 
   - name: libnvinfer-static
     build:
+      number: {{ build }}
+      string: cuda{{ cuda_version | replace('.', '') }}_{{ PKG_BUILDNUM }}
       skip: True  # [not linux]
     files:
-      - lib/libnvcaffe_parser.a
-      - lib/libnvinfer*.a
-      - lib/libnvonnxparser_static.a
-      - lib/libnvparsers_static.a
+      - lib/*_static.a
       - lib/libonnx_proto.a
-      - lib/stubs
     requirements:
       build:
         - {{ compiler("c") }}
@@ -164,7 +212,7 @@ outputs:
       host:
         - cuda-version {{ cuda_version }}
       run:
-        - {{ pin_compatible("cuda-version", max_pin="x") }}
+        - cuda-version  {{ cuda_major }}.*
     about:
       home: https://developer.nvidia.com/tensorrt
       license: LicenseRef-TensorRT-Software-License-Agreement
