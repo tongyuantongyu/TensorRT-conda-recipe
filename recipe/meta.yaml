@@ -1,24 +1,24 @@
-{% set version = "10.0.1.6" %}
+{% set version = "10.1.0.27" %}
+{% set is_ea = False %}
 {% set build = 0 %}
 {% set cuda_major = (cuda_version|default("12.0")).split(".")[0] %}
 {% set version_first_three = ".".join(version.split(".")[:3]) %}
 {% set version_major = version.split(".")[0] %}
-{% set version_patch = version.split(".")[2] %}
-{% set version_sla = "".join(version.split(".")[:3]) + ("-ea" if version_patch == "0" else "") %}
+{% set version_sla = "".join(version.split(".")[:3]) + ("-ea" if is_ea else "") %}
 
 package:
   name: tensorrt
   version: {{ version }}
 
 source:
-  - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/{{ version_first_three }}/zip/TensorRT-{{ version }}.Windows10.win10.cuda-{{ cuda_version }}.zip      # [win]
-    sha256: 1f6ab09315017d5d8aeb21c8dc33391c175d70b106262c456807f114bb40ef5b                                   # [win and cuda_version == "11.8"]
-    sha256: d667bd10b178e239b621a8929008ef3e27967d181bf07a39845a0f99edeec47a                                   # [win and cuda_version == "12.4"]
+  - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/{{ version_first_three }}/zip/TensorRT-{{ version }}.Windows.win10.cuda-{{ cuda_version }}.zip      # [win]
+    sha256: 108a90329d137303d65192589e1ae0066d9a63bf393e861c7caf72cd38e6c717                                   # [win and cuda_version == "11.8"]
+    sha256: 2eb98008944945377eb328871a308704e95bf3bb295fc548784c6da41a70bbed                                   # [win and cuda_version == "12.4"]
   - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/{{ version_first_three }}/tars/TensorRT-{{ version }}.Linux.x86_64-gnu.cuda-{{ cuda_version }}.tar.gz  # [linux]
-    sha256: 5a42364ee9ac80a76f540da8b22358ab28ff456c60bd0428f9020fe0dc0f7e32                                   # [linux and cuda_version == "11.8"]
-    sha256: a5cd2863793d69187ce4c73b2fffc1f470ff28cfd91e3640017e53b8916453d5                                   # [linux and cuda_version == "12.4"]
+    sha256: b82256748ee82b1c11f392492c5a21bbb43c33d631daf0ead6580809861c3566                                   # [linux and cuda_version == "11.8"]
+    sha256: 606436ed219c72d1a25a889b2b0ae5cb5a68499dd6f944da4cabb3c34c067d55                                   # [linux and cuda_version == "12.4"]
   - url: https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-{{ version_sla }}/pdf/TensorRT-SLA.pdf
-    sha256: 22736f54f82434849e8218ed40421de2b7efa1800c2e7faf5f9aac1930f53688
+    sha256: fdf9d52c5bd39e67010dba4ea1709a64334e82f7b82fe6b4ce6063f36d1fcf13
 
 build:
   number: {{ build }}
