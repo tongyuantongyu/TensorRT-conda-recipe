@@ -1,0 +1,11 @@
+c_compiler:
+  - vs2019
+
+c_compiler_version:
+  - "19.28"
+
+cxx_compiler:
+  - vs2019
+
+cxx_compiler_version:
+  - "19.28"

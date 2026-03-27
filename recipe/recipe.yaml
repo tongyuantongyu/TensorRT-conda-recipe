@@ -1,0 +1,983 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+context:
+  name: tensorrt
+  version: "10.13.3.9"
+  build: 0
+  version_major: ${{ (version | split('.')) | first }}
+  version_first_three: ${{ (version | split('.'))[:3] | join('.') }}
+  cuda_major: ${{ ((cuda_version | default('12.9')) | split('.')) | first }}
+  cuda_build_string: ${{ 'cuda' ~ (cuda_version | replace('.', '')) ~ '_' ~ build }}
+
+recipe:
+  name: ${{ name | lower }}
+  version: ${{ version }}
+
+source:
+  - if: win and cuda_version == "12.9"
+    then:
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.win10.cuda-${{ cuda_version }}.zip
+        sha256: d7fd63dc111dc68bc7bdf3b0b494c669ed50315502b016ec3022ac7cb3ba0615
+  - if: win and cuda_version == "13.0"
+    then:
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.win10.cuda-${{ cuda_version }}.zip
+        sha256: 10ada15b14498e0ec8556cb19433129fd362a8e3debf75db06ccacd8659d9662
+  - if: linux and cuda_version == "12.9"
+    then:
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: a40650fd51f096969db072edf216a5026e61c71157bc87f475a8549681e09d34
+  - if: linux and cuda_version == "13.0"
+    then:
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: 897261be948962c9eb5d3595625f91d85a9aa8b57601aed6efac3fd6d9ff6f53
+
+build:
+  number: ${{ build }}
+  string: cuda${{ cuda_version | replace('.', '') }}_${{ build }}
+
+about:
+  homepage: https://developer.nvidia.com/tensorrt
+  license: LicenseRef-TensorRT-Software-License-Agreement
+  license_file:
+    - doc/Acknowledgements.txt
+    - doc/Readme.txt
+  summary: "NVIDIA's TensorRT deep neural network inference library"
+  description: |
+    NVIDIA TensorRT is an SDK for optimizing trained deep learning models for
+    high-performance inference. These packages repackage NVIDIA's official
+    binary SDK archives into a conda-style runtime and development split that
+    follows the upstream Debian package layout where practical.
+  documentation: https://docs.nvidia.com/deeplearning/tensorrt/
+
+outputs:
+  - package:
+      name: libnvinfer10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvinfer.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer.so.${{ version_first_three }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvinfer_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\lib\\nvinfer_builder_resource_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer.so.${{ version_major }}
+            - lib/libnvinfer.so.${{ version_first_three }}
+            - lib/libnvinfer_builder_resource.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvinfer_${{ version_major }}.dll
+            - Library/bin/nvinfer_builder_resource_${{ version_major }}.dll
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - if: linux
+          then:
+            - ${{ stdlib('c') }}
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvinfer_${{ version_major }}.dll exit 1
+              - if not exist %LIBRARY_BIN%\nvinfer_builder_resource_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvinfer.so.${{ version_first_three }}
+              - test -f $PREFIX/lib/libnvinfer.so.${{ version_major }}
+              - test -f $PREFIX/lib/libnvinfer_builder_resource.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT core inference runtime"
+      description: |
+        Mirrors NVIDIA `libnvinfer10`. On Linux this keeps the standard builder
+        resources, while the Windows-on-Linux builder resources live in
+        `libnvinfer-win-builder-resource10`.
+
+  - package:
+      name: libnvinfer-plugin10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_plugin.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_plugin.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvinfer_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_plugin.so.${{ version_major }}
+            - lib/libnvinfer_plugin.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvinfer_plugin_${{ version_major }}.dll
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvinfer_plugin_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvinfer_plugin.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT standard plugins runtime"
+
+  - package:
+      name: libnvinfer-dispatch10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_dispatch.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_dispatch.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvinfer_dispatch_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_dispatch.so.${{ version_major }}
+            - lib/libnvinfer_dispatch.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvinfer_dispatch_${{ version_major }}.dll
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvinfer_dispatch_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvinfer_dispatch.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT dispatch runtime"
+
+  - package:
+      name: libnvinfer-lean10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_lean.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_lean.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvinfer_lean_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_lean.so.${{ version_major }}
+            - lib/libnvinfer_lean.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvinfer_lean_${{ version_major }}.dll
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvinfer_lean_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvinfer_lean.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT lean runtime"
+
+  - package:
+      name: libnvinfer-vc-plugin10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_vc_plugin.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_vc_plugin.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvinfer_vc_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_vc_plugin.so.${{ version_major }}
+            - lib/libnvinfer_vc_plugin.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvinfer_vc_plugin_${{ version_major }}.dll
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvinfer_vc_plugin_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvinfer_vc_plugin.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT VC plugin runtime"
+
+  - package:
+      name: libnvonnxparsers10
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib
+            - cp -a "$TRT_LIB_DIR"/libnvonnxparser.so.${{ version_major }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvonnxparser.so.${{ version_first_three }} "$PREFIX/lib/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\lib\\nvonnxparser_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvonnxparser.so.${{ version_major }}
+            - lib/libnvonnxparser.so.${{ version_first_three }}
+        - if: win
+          then:
+            - Library/bin/nvonnxparser_${{ version_major }}.dll
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\nvonnxparser_${{ version_major }}.dll exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/lib/libnvonnxparser.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT ONNX parser runtime"
+
+  - package:
+      name: libnvinfer-win-builder-resource10
+    build:
+      skip:
+        - not linux
+      script:
+        - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+        - mkdir -p $PREFIX/lib
+        - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_win.so.${{ version_first_three }} "$PREFIX/lib/"
+      files:
+        - lib/libnvinfer_builder_resource_win.so.${{ version_first_three }}
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - ${{ stdlib('c') }}
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - __glibc >=2.28
+    tests:
+      - script:
+          - test -f $PREFIX/lib/libnvinfer_builder_resource_win.so.${{ version_first_three }}
+    about:
+      summary: "TensorRT Windows-engine builder resources on Linux"
+
+  - package:
+      name: libnvinfer-headers-python-plugin-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - mkdir -p $PREFIX/include/impl
+            - cp -a python/include/impl/NvInferPythonPlugin.h $PREFIX/include/impl/
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\include\\impl" mkdir "%PREFIX%\\Library\\include\\impl"
+            - copy "%SRC_DIR%\\python\\include\\impl\\NvInferPythonPlugin.h" "%PREFIX%\\Library\\include\\impl\\"
+      files:
+        - if: linux
+          then:
+            - include/impl/NvInferPythonPlugin.h
+        - if: win
+          then:
+            - Library/include/impl/NvInferPythonPlugin.h
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+        - ${{ 'libnvinfer-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+      run:
+        - ${{ 'libnvinfer-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_INC%\impl\NvInferPythonPlugin.h exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/include/impl/NvInferPythonPlugin.h
+    about:
+      summary: "TensorRT Python plugin headers"
+
+  - package:
+      name: libnvinfer-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/include
+            - cp -a include/NvInfer.h include/NvInferImpl.h include/NvInferLegacyDims.h include/NvInferPluginBase.h include/NvInferRuntime.h include/NvInferRuntimeBase.h include/NvInferRuntimeCommon.h include/NvInferRuntimePlugin.h include/NvInferVersion.h $PREFIX/include/
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvinfer.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libtensorrt_shim.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvinfer.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\include" mkdir "%PREFIX%\\Library\\include"
+            - copy "%SRC_DIR%\\include\\NvInfer.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferImpl.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferLegacyDims.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferPluginBase.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferRuntime.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferRuntimeBase.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferRuntimeCommon.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferRuntimePlugin.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferVersion.h" "%PREFIX%\\Library\\include\\"
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvinfer_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - include/NvInfer.h
+            - include/NvInferImpl.h
+            - include/NvInferLegacyDims.h
+            - include/NvInferPluginBase.h
+            - include/NvInferRuntime.h
+            - include/NvInferRuntimeBase.h
+            - include/NvInferRuntimeCommon.h
+            - include/NvInferRuntimePlugin.h
+            - include/NvInferVersion.h
+            - lib/libnvinfer.so
+            - lib/libtensorrt_shim.so
+            - lib/stubs/libnvinfer.so
+        - if: win
+          then:
+            - Library/include/NvInfer.h
+            - Library/include/NvInferImpl.h
+            - Library/include/NvInferLegacyDims.h
+            - Library/include/NvInferPluginBase.h
+            - Library/include/NvInferRuntime.h
+            - Library/include/NvInferRuntimeBase.h
+            - Library/include/NvInferRuntimeCommon.h
+            - Library/include/NvInferRuntimePlugin.h
+            - Library/include/NvInferVersion.h
+            - Library/lib/nvinfer_${{ version_major }}.lib
+    requirements:
+      build:
+        - ${{ compiler('c') }}
+        - ${{ compiler('cxx') }}
+        - if: linux
+          then:
+            - ${{ stdlib('c') }}
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_exports:
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_INC%\NvInfer.h exit 1
+              - if not exist %LIBRARY_INC%\NvInferPluginBase.h exit 1
+              - if not exist %LIBRARY_INC%\NvInferRuntimePlugin.h exit 1
+              - if not exist %LIBRARY_LIB%\nvinfer_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/include/NvInfer.h
+              - test -f $PREFIX/include/NvInferPluginBase.h
+              - test -f $PREFIX/include/NvInferRuntimePlugin.h
+              - test -L $PREFIX/lib/libnvinfer.so || test -f $PREFIX/lib/libnvinfer.so
+              - test -f $PREFIX/lib/stubs/libnvinfer.so
+              - test -f $PREFIX/lib/libtensorrt_shim.so
+    about:
+      summary: "TensorRT core development libraries"
+      description: |
+        Mirrors NVIDIA `libnvinfer-dev`, with the upstream
+        `libnvinfer-headers-dev` payload merged into the dev output.
+
+  - package:
+      name: libnvinfer-lean-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_lean.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvinfer_lean.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvinfer_lean_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_lean.so
+            - lib/stubs/libnvinfer_lean.so
+        - if: win
+          then:
+            - Library/lib/nvinfer_lean_${{ version_major }}.lib
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-lean10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_exports:
+        - ${{ pin_subpackage('libnvinfer-lean10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_LIB%\nvinfer_lean_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -L $PREFIX/lib/libnvinfer_lean.so || test -f $PREFIX/lib/libnvinfer_lean.so
+              - test -f $PREFIX/lib/stubs/libnvinfer_lean.so
+    about:
+      summary: "TensorRT lean development libraries"
+
+  - package:
+      name: libnvinfer-dispatch-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_dispatch.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvinfer_dispatch.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvinfer_dispatch_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_dispatch.so
+            - lib/stubs/libnvinfer_dispatch.so
+        - if: win
+          then:
+            - Library/lib/nvinfer_dispatch_${{ version_major }}.lib
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-dispatch10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_exports:
+        - ${{ pin_subpackage('libnvinfer-dispatch10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_LIB%\nvinfer_dispatch_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -L $PREFIX/lib/libnvinfer_dispatch.so || test -f $PREFIX/lib/libnvinfer_dispatch.so
+              - test -f $PREFIX/lib/stubs/libnvinfer_dispatch.so
+    about:
+      summary: "TensorRT dispatch development libraries"
+
+  - package:
+      name: libnvinfer-plugin-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/include
+            - cp -a include/NvInferPlugin.h include/NvInferPluginUtils.h $PREFIX/include/
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_plugin.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvinfer_plugin.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\include" mkdir "%PREFIX%\\Library\\include"
+            - copy "%SRC_DIR%\\include\\NvInferPlugin.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvInferPluginUtils.h" "%PREFIX%\\Library\\include\\"
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvinfer_plugin_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - include/NvInferPlugin.h
+            - include/NvInferPluginUtils.h
+            - lib/libnvinfer_plugin.so
+            - lib/stubs/libnvinfer_plugin.so
+        - if: win
+          then:
+            - Library/include/NvInferPlugin.h
+            - Library/include/NvInferPluginUtils.h
+            - Library/lib/nvinfer_plugin_${{ version_major }}.lib
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-plugin10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_exports:
+        - ${{ pin_subpackage('libnvinfer-plugin10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_INC%\NvInferPlugin.h exit 1
+              - if not exist %LIBRARY_INC%\NvInferPluginUtils.h exit 1
+              - if not exist %LIBRARY_LIB%\nvinfer_plugin_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/include/NvInferPlugin.h
+              - test -f $PREFIX/include/NvInferPluginUtils.h
+              - test -L $PREFIX/lib/libnvinfer_plugin.so || test -f $PREFIX/lib/libnvinfer_plugin.so
+              - test -f $PREFIX/lib/stubs/libnvinfer_plugin.so
+    about:
+      summary: "TensorRT plugin development libraries"
+      description: |
+        Mirrors NVIDIA `libnvinfer-plugin-dev`, with the upstream
+        `libnvinfer-headers-plugin-dev` payload merged into the dev output.
+
+  - package:
+      name: libnvinfer-vc-plugin-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_vc_plugin.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvinfer_vc_plugin.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvinfer_vc_plugin_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - lib/libnvinfer_vc_plugin.so
+            - lib/stubs/libnvinfer_vc_plugin.so
+        - if: win
+          then:
+            - Library/lib/nvinfer_vc_plugin_${{ version_major }}.lib
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer-plugin-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-vc-plugin10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_constraints:
+        - ${{ pin_subpackage('libnvinfer-lean-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-dispatch-dev', exact=True) }}
+      run_exports:
+        - ${{ pin_subpackage('libnvinfer-vc-plugin10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_LIB%\nvinfer_vc_plugin_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -L $PREFIX/lib/libnvinfer_vc_plugin.so || test -f $PREFIX/lib/libnvinfer_vc_plugin.so
+              - test -f $PREFIX/lib/stubs/libnvinfer_vc_plugin.so
+    about:
+      summary: "TensorRT VC plugin development libraries"
+
+  - package:
+      name: libnvonnxparsers-dev
+    build:
+      script:
+        - if: linux
+          then:
+            - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
+            - mkdir -p $PREFIX/include
+            - cp -a include/NvOnnxConfig.h include/NvOnnxParser.h $PREFIX/include/
+            - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
+            - cp -a "$TRT_LIB_DIR"/libnvonnxparser.so "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/stubs/libnvonnxparser.so "$PREFIX/lib/stubs/"
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\include" mkdir "%PREFIX%\\Library\\include"
+            - copy "%SRC_DIR%\\include\\NvOnnxConfig.h" "%PREFIX%\\Library\\include\\"
+            - copy "%SRC_DIR%\\include\\NvOnnxParser.h" "%PREFIX%\\Library\\include\\"
+            - if not exist "%PREFIX%\\Library\\lib" mkdir "%PREFIX%\\Library\\lib"
+            - copy "%SRC_DIR%\\lib\\nvonnxparser_${{ version_major }}.lib" "%PREFIX%\\Library\\lib\\"
+      files:
+        - if: linux
+          then:
+            - include/NvOnnxConfig.h
+            - include/NvOnnxParser.h
+            - lib/libnvonnxparser.so
+            - lib/stubs/libnvonnxparser.so
+        - if: win
+          then:
+            - Library/include/NvOnnxConfig.h
+            - Library/include/NvOnnxParser.h
+            - Library/lib/nvonnxparser_${{ version_major }}.lib
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer-dev', exact=True) }}
+        - ${{ pin_subpackage('libnvonnxparsers10', exact=True) }}
+        - if: linux
+          then:
+            - __glibc >=2.28
+      run_exports:
+        - ${{ pin_subpackage('libnvonnxparsers10', exact=True) }}
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_INC%\NvOnnxParser.h exit 1
+              - if not exist %LIBRARY_LIB%\nvonnxparser_${{ version_major }}.lib exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/include/NvOnnxParser.h
+              - test -L $PREFIX/lib/libnvonnxparser.so || test -f $PREFIX/lib/libnvonnxparser.so
+              - test -f $PREFIX/lib/stubs/libnvonnxparser.so
+    about:
+      summary: "TensorRT ONNX parser development libraries"
+
+  - package:
+      name: libnvinfer-bin
+    build:
+      script:
+        - if: linux
+          then:
+            - mkdir -p $PREFIX/bin
+            - cp -a bin/trtexec bin/tensorrt_player $PREFIX/bin/
+        - if: win
+          then:
+            - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
+            - copy "%SRC_DIR%\\bin\\trtexec.exe" "%PREFIX%\\Library\\bin\\"
+      files:
+        - if: linux
+          then:
+            - bin/trtexec
+            - bin/tensorrt_player
+        - if: win
+          then:
+            - Library/bin/trtexec.exe
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - cuda-version ${{ cuda_major }}.*
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-lean10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-plugin10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-vc-plugin10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-dispatch10', exact=True) }}
+        - ${{ pin_subpackage('libnvonnxparsers10', exact=True) }}
+        - cuda-cudart
+        - if: linux
+          then:
+            - __glibc >=2.28
+    tests:
+      - script:
+          - if: win
+            then:
+              - if not exist %LIBRARY_BIN%\trtexec.exe exit 1
+          - if: linux
+            then:
+              - test -f $PREFIX/bin/trtexec
+              - test -f $PREFIX/bin/tensorrt_player
+    about:
+      summary: "TensorRT command-line tools"
+
+  - package:
+      name: tensorrt-python
+    build:
+      string: py${{ python | replace('.', '') }}_cuda${{ cuda_version | replace('.', '') }}_${{ build }}
+      script:
+        - if: linux
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "python/tensorrt-${{ version }}-cp${{ python | replace('.', '') }}-none-linux_x86_64.whl"
+        - if: win
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "%SRC_DIR%\\python\\tensorrt-${{ version }}-cp${{ python | replace('.', '') }}-none-win_amd64.whl"
+    requirements:
+      host:
+        - python
+        - pip
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - python
+        - ${{ pin_subpackage('libnvinfer10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-plugin10', exact=True) }}
+        - ${{ pin_subpackage('libnvinfer-vc-plugin10', exact=True) }}
+        - ${{ pin_subpackage('libnvonnxparsers10', exact=True) }}
+    tests:
+      - script:
+          - python -c "import tensorrt; print(tensorrt.__version__)"
+    about:
+      summary: "TensorRT Python bindings"
+
+  - package:
+      name: tensorrt-lean-python
+    build:
+      string: py${{ python | replace('.', '') }}_cuda${{ cuda_version | replace('.', '') }}_${{ build }}
+      script:
+        - if: linux
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "python/tensorrt_lean-${{ version }}-cp${{ python | replace('.', '') }}-none-linux_x86_64.whl"
+        - if: win
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "%SRC_DIR%\\python\\tensorrt_lean-${{ version }}-cp${{ python | replace('.', '') }}-none-win_amd64.whl"
+    requirements:
+      host:
+        - python
+        - pip
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - python
+        - ${{ pin_subpackage('libnvinfer-lean10', exact=True) }}
+    tests:
+      - script:
+          - python -c "import tensorrt_lean; print(tensorrt_lean.__version__)"
+    about:
+      summary: "TensorRT lean Python bindings"
+
+  - package:
+      name: tensorrt-dispatch-python
+    build:
+      string: py${{ python | replace('.', '') }}_cuda${{ cuda_version | replace('.', '') }}_${{ build }}
+      script:
+        - if: linux
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "python/tensorrt_dispatch-${{ version }}-cp${{ python | replace('.', '') }}-none-linux_x86_64.whl"
+        - if: win
+          then:
+            - python -m pip install --no-deps --no-build-isolation --no-index --ignore-installed "%SRC_DIR%\\python\\tensorrt_dispatch-${{ version }}-cp${{ python | replace('.', '') }}-none-win_amd64.whl"
+    requirements:
+      host:
+        - python
+        - pip
+        - cuda-version ==${{ cuda_version }}
+      run:
+        - python
+        - ${{ pin_subpackage('libnvinfer-dispatch10', exact=True) }}
+    tests:
+      - script:
+          - python -c "import tensorrt_dispatch; print(tensorrt_dispatch.__version__)"
+    about:
+      summary: "TensorRT dispatch Python bindings"
+
+  - package:
+      name: tensorrt-libs
+    build:
+      script:
+        - if: win
+          then:
+            - echo tensorrt-libs is a metapackage.
+        - if: linux
+          then:
+            - echo "tensorrt-libs is a metapackage."
+    requirements:
+      host:
+        - ${{ 'libnvinfer10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-lean10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-plugin10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-vc-plugin10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-dispatch10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvonnxparsers10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - if: linux
+          then:
+            - ${{ 'libnvinfer-win-builder-resource10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+      run:
+        - ${{ 'libnvinfer10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-lean10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-plugin10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-vc-plugin10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-dispatch10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvonnxparsers10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - if: linux
+          then:
+            - ${{ 'libnvinfer-win-builder-resource10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+    about:
+      summary: "Meta-package depending on TensorRT shared libraries"
+
+  - package:
+      name: libnvinfer
+    build:
+      script:
+        - if: win
+          then:
+            - echo libnvinfer is a compatibility metapackage.
+        - if: linux
+          then:
+            - echo "libnvinfer is a compatibility metapackage."
+    requirements:
+      host:
+        - ${{ 'tensorrt-libs ==' ~ version ~ ' ' ~ cuda_build_string }}
+      run:
+        - ${{ 'tensorrt-libs ==' ~ version ~ ' ' ~ cuda_build_string }}
+    about:
+      summary: "Backward-compatible alias for tensorrt-libs"
+      description: |
+        Historically this recipe exposed a single `libnvinfer` runtime package.
+        It now redirects to the split runtime metapackage `tensorrt-libs`.
+
+  - package:
+      name: tensorrt-dev
+    build:
+      script:
+        - if: win
+          then:
+            - echo tensorrt-dev is a metapackage.
+        - if: linux
+          then:
+            - echo "tensorrt-dev is a metapackage."
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+        - ${{ 'libnvinfer-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-lean-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-dispatch-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-vc-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvonnxparsers-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-headers-python-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - if: linux
+          then:
+            - ${{ 'libnvinfer-win-builder-resource10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+      run:
+        - ${{ 'libnvinfer-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-lean-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-dispatch-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-vc-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvonnxparsers-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'libnvinfer-headers-python-plugin-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - if: linux
+          then:
+            - ${{ 'libnvinfer-win-builder-resource10 ==' ~ version ~ ' ' ~ cuda_build_string }}
+    about:
+      summary: "Meta-package depending on TensorRT development packages"
+
+  - package:
+      name: tensorrt
+    build:
+      script:
+        - if: win
+          then:
+            - echo tensorrt is a metapackage.
+        - if: linux
+          then:
+            - echo "tensorrt is a metapackage."
+    requirements:
+      host:
+        - cuda-version ==${{ cuda_version }}
+        - ${{ 'libnvinfer-bin ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'tensorrt-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+      run:
+        - ${{ 'libnvinfer-bin ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - ${{ 'tensorrt-dev ==' ~ version ~ ' ' ~ cuda_build_string }}
+        - tensorrt-python ==${{ version }}
+        - tensorrt-lean-python ==${{ version }}
+        - tensorrt-dispatch-python ==${{ version }}
+    about:
+      summary: "TensorRT umbrella metapackage"
+      description: |
+        Mirrors the full upstream `tensorrt` umbrella package: C/C++ runtime,
+        development files, tools, and the Python bindings without pinning a
+        specific Python build variant.
+
+extra:
+  recipe-maintainers:
+    - tongyuantongyu

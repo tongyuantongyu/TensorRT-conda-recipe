@@ -1,2 +1,4 @@
 *.zip
 *.tar.gz
+tmp
+output
