@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
 context:
   name: tensorrt
-  version: "10.15.1.29"
+  version: "10.16.0.72"
   build: 0
   version_major: ${{ (version | split('.')) | first }}
   version_first_three: ${{ (version | split('.'))[:3] | join('.') }}
@@ -15,20 +15,20 @@ recipe:
 source:
   - if: win and cuda_version == "12.9"
     then:
-      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
-        sha256: 1da5e20d8f9532995bc955c075d851491106704ad333c344b16789663200977d
-  - if: win and cuda_version == "13.1"
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
+        sha256: 0fcb801fe296d64f2ca4c8904cd76eb4c8963d2e6063e58fc14f52baa18f0b34
+  - if: win and cuda_version == "13.2"
     then:
-      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
-        sha256: 83304c1f9ab86534f083bc4864691b38dee34135fd1aa0391644531c7c4e1e1e
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
+        sha256: 10929ba0f0bb019fde205e089f4db3fce4aecca5bb6b40fee57bbd72ff5abf2a
   - if: linux and cuda_version == "12.9"
     then:
-      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
-        sha256: e0a3f323e0220c1aed3d10aafc12e452a3301688875fe8a6b36f6f6052d446ef
-  - if: linux and cuda_version == "13.1"
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: 1482e22b572b5a3e9d8ae30093ea06436f502205e14cd382b6ff2fbc3c957bf0
+  - if: linux and cuda_version == "13.2"
     then:
-      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
-        sha256: 2e2d6e800221e840e1fc7eba7a5e4b13390cf14856b4b21af429694e21602222
+      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: 956a28dcee7b408b1897108288e010c61c0b2d9bedb6cf00e3fbc8f9c6b07042
 
 build:
   number: ${{ build }}
@@ -392,7 +392,7 @@ outputs:
           then:
             - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
             - mkdir -p $PREFIX/include
-            - cp -a include/NvInfer.h include/NvInferImpl.h include/NvInferLegacyDims.h include/NvInferPluginBase.h include/NvInferRuntime.h include/NvInferRuntimeBase.h include/NvInferRuntimeCommon.h include/NvInferRuntimePlugin.h include/NvInferVersion.h $PREFIX/include/
+            - cp -a include/NvInfer.h include/NvInferConsistency.h include/NvInferForwardDecl.h include/NvInferImpl.h include/NvInferLegacyDims.h include/NvInferPluginBase.h include/NvInferRuntime.h include/NvInferRuntimeBase.h include/NvInferRuntimeCommon.h include/NvInferRuntimePlugin.h include/NvInferSafeMemAllocator.h include/NvInferSafePlugin.h include/NvInferSafeRecorder.h include/NvInferSafeRuntime.h include/NvInferVersion.h $PREFIX/include/
             - mkdir -p $PREFIX/lib $PREFIX/lib/stubs
             - cp -a "$TRT_LIB_DIR"/libnvinfer.so "$PREFIX/lib/"
             - cp -a "$TRT_LIB_DIR"/libtensorrt_shim.so "$PREFIX/lib/"
@@ -415,6 +415,8 @@ outputs:
         - if: linux
           then:
             - include/NvInfer.h
+            - include/NvInferConsistency.h
+            - include/NvInferForwardDecl.h
             - include/NvInferImpl.h
             - include/NvInferLegacyDims.h
             - include/NvInferPluginBase.h
@@ -422,6 +424,10 @@ outputs:
             - include/NvInferRuntimeBase.h
             - include/NvInferRuntimeCommon.h
             - include/NvInferRuntimePlugin.h
+            - include/NvInferSafeMemAllocator.h
+            - include/NvInferSafePlugin.h
+            - include/NvInferSafeRecorder.h
+            - include/NvInferSafeRuntime.h
             - include/NvInferVersion.h
             - lib/libnvinfer.so
             - lib/libtensorrt_shim.so
@@ -466,6 +472,7 @@ outputs:
           - if: linux
             then:
               - test -f $PREFIX/include/NvInfer.h
+              - test -f $PREFIX/include/NvInferSafeRuntime.h
               - test -f $PREFIX/include/NvInferPluginBase.h
               - test -f $PREFIX/include/NvInferRuntimePlugin.h
               - test -L $PREFIX/lib/libnvinfer.so || test -f $PREFIX/lib/libnvinfer.so
