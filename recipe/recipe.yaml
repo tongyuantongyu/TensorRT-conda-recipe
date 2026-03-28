@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
 context:
   name: tensorrt
-  version: "10.13.3.9"
+  version: "10.15.1.29"
   build: 0
   version_major: ${{ (version | split('.')) | first }}
   version_first_three: ${{ (version | split('.'))[:3] | join('.') }}
@@ -15,20 +15,20 @@ recipe:
 source:
   - if: win and cuda_version == "12.9"
     then:
-      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.win10.cuda-${{ cuda_version }}.zip
-        sha256: d7fd63dc111dc68bc7bdf3b0b494c669ed50315502b016ec3022ac7cb3ba0615
-  - if: win and cuda_version == "13.0"
+      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
+        sha256: 1da5e20d8f9532995bc955c075d851491106704ad333c344b16789663200977d
+  - if: win and cuda_version == "13.1"
     then:
-      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.win10.cuda-${{ cuda_version }}.zip
-        sha256: 10ada15b14498e0ec8556cb19433129fd362a8e3debf75db06ccacd8659d9662
+      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/zip/TensorRT-${{ version }}.Windows.amd64.cuda-${{ cuda_version }}.zip
+        sha256: 83304c1f9ab86534f083bc4864691b38dee34135fd1aa0391644531c7c4e1e1e
   - if: linux and cuda_version == "12.9"
     then:
-      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
-        sha256: a40650fd51f096969db072edf216a5026e61c71157bc87f475a8549681e09d34
-  - if: linux and cuda_version == "13.0"
+      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: e0a3f323e0220c1aed3d10aafc12e452a3301688875fe8a6b36f6f6052d446ef
+  - if: linux and cuda_version == "13.1"
     then:
-      - url: https://developer.nvidia.com/downloads/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
-        sha256: 897261be948962c9eb5d3595625f91d85a9aa8b57601aed6efac3fd6d9ff6f53
+      - url: https://developer.download.nvidia.com/compute/machine-learning/tensorrt/${{ version_first_three }}/tars/TensorRT-${{ version }}.Linux.x86_64-gnu.cuda-${{ cuda_version }}.tar.gz
+        sha256: 2e2d6e800221e840e1fc7eba7a5e4b13390cf14856b4b21af429694e21602222
 
 build:
   number: ${{ build }}
@@ -39,7 +39,7 @@ about:
   license: LicenseRef-TensorRT-Software-License-Agreement
   license_file:
     - doc/Acknowledgements.txt
-    - doc/Readme.txt
+    - doc/README.txt
   summary: "NVIDIA's TensorRT deep neural network inference library"
   description: |
     NVIDIA TensorRT is an SDK for optimizing trained deep learning models for
@@ -59,22 +59,26 @@ outputs:
             - mkdir -p $PREFIX/lib
             - cp -a "$TRT_LIB_DIR"/libnvinfer.so.${{ version_major }} "$PREFIX/lib/"
             - cp -a "$TRT_LIB_DIR"/libnvinfer.so.${{ version_first_three }} "$PREFIX/lib/"
-            - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource.so.${{ version_first_three }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_ptx.so.${{ version_first_three }} "$PREFIX/lib/"
+            - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_sm*.so.${{ version_first_three }} "$PREFIX/lib/"
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvinfer_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
-            - copy "%SRC_DIR%\\lib\\nvinfer_builder_resource_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_builder_resource_ptx_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_builder_resource_sm*_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
             - lib/libnvinfer.so.${{ version_major }}
             - lib/libnvinfer.so.${{ version_first_three }}
-            - lib/libnvinfer_builder_resource.so.${{ version_first_three }}
+            - lib/libnvinfer_builder_resource_ptx.so.${{ version_first_three }}
+            - ${{ 'lib/libnvinfer_builder_resource_sm*.so.' ~ version_first_three }}
         - if: win
           then:
             - Library/bin/nvinfer_${{ version_major }}.dll
-            - Library/bin/nvinfer_builder_resource_${{ version_major }}.dll
+            - Library/bin/nvinfer_builder_resource_ptx_${{ version_major }}.dll
+            - ${{ 'Library/bin/nvinfer_builder_resource_sm*_' ~ version_major ~ '.dll' }}
     requirements:
       build:
         - ${{ compiler('c') }}
@@ -94,12 +98,10 @@ outputs:
           - if: win
             then:
               - if not exist %LIBRARY_BIN%\nvinfer_${{ version_major }}.dll exit 1
-              - if not exist %LIBRARY_BIN%\nvinfer_builder_resource_${{ version_major }}.dll exit 1
           - if: linux
             then:
               - test -f $PREFIX/lib/libnvinfer.so.${{ version_first_three }}
               - test -f $PREFIX/lib/libnvinfer.so.${{ version_major }}
-              - test -f $PREFIX/lib/libnvinfer_builder_resource.so.${{ version_first_three }}
     about:
       summary: "TensorRT core inference runtime"
       description: |
@@ -120,7 +122,7 @@ outputs:
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvinfer_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
@@ -162,7 +164,7 @@ outputs:
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvinfer_dispatch_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_dispatch_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
@@ -204,7 +206,7 @@ outputs:
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvinfer_lean_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_lean_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
@@ -246,7 +248,7 @@ outputs:
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvinfer_vc_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvinfer_vc_plugin_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
@@ -287,7 +289,7 @@ outputs:
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\bin" mkdir "%PREFIX%\\Library\\bin"
-            - copy "%SRC_DIR%\\lib\\nvonnxparser_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
+            - copy "%SRC_DIR%\\bin\\nvonnxparser_${{ version_major }}.dll" "%PREFIX%\\Library\\bin\\"
       files:
         - if: linux
           then:
@@ -324,9 +326,11 @@ outputs:
       script:
         - TRT_LIB_DIR="lib"; if test -d targets/x86_64-linux-gnu/lib; then TRT_LIB_DIR="targets/x86_64-linux-gnu/lib"; fi
         - mkdir -p $PREFIX/lib
-        - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_win.so.${{ version_first_three }} "$PREFIX/lib/"
+        - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_win_ptx.so.${{ version_first_three }} "$PREFIX/lib/"
+        - cp -a "$TRT_LIB_DIR"/libnvinfer_builder_resource_win_sm*.so.${{ version_first_three }} "$PREFIX/lib/"
       files:
-        - lib/libnvinfer_builder_resource_win.so.${{ version_first_three }}
+        - lib/libnvinfer_builder_resource_win_ptx.so.${{ version_first_three }}
+        - ${{ 'lib/libnvinfer_builder_resource_win_sm*.so.' ~ version_first_three }}
     requirements:
       build:
         - ${{ compiler('c') }}
@@ -340,7 +344,7 @@ outputs:
         - __glibc >=2.28
     tests:
       - script:
-          - test -f $PREFIX/lib/libnvinfer_builder_resource_win.so.${{ version_first_three }}
+          - test -f $PREFIX/lib/libnvinfer_builder_resource_win_ptx.so.${{ version_first_three }}
     about:
       summary: "TensorRT Windows-engine builder resources on Linux"
 
@@ -351,11 +355,11 @@ outputs:
         - if: linux
           then:
             - mkdir -p $PREFIX/include/impl
-            - cp -a python/include/impl/NvInferPythonPlugin.h $PREFIX/include/impl/
+            - cp -a include/impl/NvInferPythonPlugin.h $PREFIX/include/impl/
         - if: win
           then:
             - if not exist "%PREFIX%\\Library\\include\\impl" mkdir "%PREFIX%\\Library\\include\\impl"
-            - copy "%SRC_DIR%\\python\\include\\impl\\NvInferPythonPlugin.h" "%PREFIX%\\Library\\include\\impl\\"
+            - copy "%SRC_DIR%\\include\\impl\\NvInferPythonPlugin.h" "%PREFIX%\\Library\\include\\impl\\"
       files:
         - if: linux
           then:
