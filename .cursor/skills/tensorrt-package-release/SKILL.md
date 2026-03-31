@@ -57,21 +57,21 @@ wsl.exe bash -ic "cd /mnt/d/Python/conda-packages/tensorrt/recipe && mamba run -
 - Windows cleanup example:
 
 ```powershell
-Get-ChildItem -LiteralPath "D:/Python/conda-packages/tensorrt/recipe/output/win-64" -Filter *.conda
-Get-ChildItem -LiteralPath "D:/Python/conda-packages/tensorrt/recipe/output/win-64" -Filter *.conda | Remove-Item -Force
+Get-ChildItem -LiteralPath "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64" -Filter *.conda
+Get-ChildItem -LiteralPath "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64" -Filter *.conda | Remove-Item -Force
 ```
 
 - Linux/WSL cleanup example:
 
 ```powershell
-Get-ChildItem -LiteralPath "D:/Python/conda-packages/tensorrt/recipe/output/linux-64" -Filter *.conda
-Get-ChildItem -LiteralPath "D:/Python/conda-packages/tensorrt/recipe/output/linux-64" -Filter *.conda | Remove-Item -Force
+Get-ChildItem -LiteralPath "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64" -Filter *.conda
+Get-ChildItem -LiteralPath "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64" -Filter *.conda | Remove-Item -Force
 ```
 
 - After cleanup, run:
 
 ```powershell
-mamba run -n base python -m conda_index "D:/Python/conda-packages/tensorrt/recipe/output"
+mamba run -n base python -m conda_index "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output"
 ```
 
 5. Run the build in safe order.
@@ -81,7 +81,7 @@ mamba run -n base python -m conda_index "D:/Python/conda-packages/tensorrt/recip
 - Windows:
 
 ```powershell
-mamba run --live-stream -n base rattler-build build -r recipe.yaml -m variants.yaml -m variants.win.yaml -c conda-forge
+mamba run --live-stream -n base rattler-build build --package-format conda:max --no-include-recipe -r recipe.yaml -m variants.yaml -m variants.win.yaml -c conda-forge
 ```
 
 - Linux from the Windows host through WSL:
@@ -113,8 +113,8 @@ wsl.exe bash -ic "cd /mnt/d/Python/conda-packages/tensorrt/recipe && mamba run -
 - Typical Windows copy commands:
 
 ```powershell
-Copy-Item "D:/Python/conda-packages/tensorrt/recipe/output/win-64/*.conda" "D:/PyEnv/channels/private/win-64/" -Force
-Copy-Item "D:/Python/conda-packages/tensorrt/recipe/output/linux-64/*.conda" "D:/PyEnv/channels/private/linux-64/" -Force
+Copy-Item "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64/*.conda" "D:/PyEnv/channels/private/win-64/" -Force
+Copy-Item "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64/*.conda" "D:/PyEnv/channels/private/linux-64/" -Force
 ```
 
 - Then rebuild the private channel index:

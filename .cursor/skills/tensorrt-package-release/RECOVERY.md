@@ -50,12 +50,12 @@ Windows example:
 
 ```powershell
 $bad = @(
-  "D:/Python/conda-packages/tensorrt/recipe/output/win-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda",
-  "D:/Python/conda-packages/tensorrt/recipe/output/win-64/tensorrt-dev-10.15.1.29-cuda129_0.conda",
-  "D:/Python/conda-packages/tensorrt/recipe/output/win-64/tensorrt-10.15.1.29-cuda129_0.conda"
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda",
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64/tensorrt-dev-10.15.1.29-cuda129_0.conda",
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/win-64/tensorrt-10.15.1.29-cuda129_0.conda"
 )
 $bad | ForEach-Object { Remove-Item -LiteralPath $_ -Force }
-mamba run -n base python -m conda_index "D:/Python/conda-packages/tensorrt/recipe/output"
+mamba run -n base python -m conda_index "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output"
 mamba run --live-stream -n base rattler-build build -r recipe.yaml -m variants.yaml -m variants.win.yaml -c conda-forge --skip-existing local
 ```
 
@@ -63,12 +63,12 @@ Linux example from the Windows host:
 
 ```powershell
 $bad = @(
-  "D:/Python/conda-packages/tensorrt/recipe/output/linux-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda",
-  "D:/Python/conda-packages/tensorrt/recipe/output/linux-64/tensorrt-dev-10.15.1.29-cuda129_0.conda",
-  "D:/Python/conda-packages/tensorrt/recipe/output/linux-64/tensorrt-10.15.1.29-cuda129_0.conda"
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda",
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64/tensorrt-dev-10.15.1.29-cuda129_0.conda",
+  "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output/linux-64/tensorrt-10.15.1.29-cuda129_0.conda"
 )
 $bad | ForEach-Object { Remove-Item -LiteralPath $_ -Force }
-mamba run -n base python -m conda_index "D:/Python/conda-packages/tensorrt/recipe/output"
+mamba run -n base python -m conda_index "C:\Users\TYTY\Libraries\conda-packages\tensorrt/recipe/output"
 wsl.exe bash -ic "cd /mnt/d/Python/conda-packages/tensorrt/recipe && mamba run -n base rattler-build build -r recipe.yaml -m variants.yaml -m variants.linux.yaml -c conda-forge --skip-existing local"
 ```
 
