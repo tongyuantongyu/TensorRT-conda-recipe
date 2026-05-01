@@ -70,9 +70,9 @@ mamba run --live-stream -n base rattler-build build -r recipe.yaml -m variants.y
 Linux example from the Windows host through WSL:
 
 ```powershell
-wsl.exe bash -ic "rm -f ~/project/conda-packages/linux-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda ~/project/conda-packages/linux-64/tensorrt-dev-10.15.1.29-cuda129_0.conda ~/project/conda-packages/linux-64/tensorrt-10.15.1.29-cuda129_0.conda"
-wsl.exe bash -ic "python -m conda_index ~/project/conda-packages"
-wsl.exe bash -ic "cd /mnt/c/Users/TYTY/Libraries/conda-packages/tensorrt/recipe/ && rattler-build build --package-format conda:max --no-include-recipe -r recipe.yaml -m variants.yaml -m variants.linux.yaml -c conda-forge --output-dir ~/project/conda-packages --skip-existing local"
+wsl.exe bash -lc 'rm -f "$HOME"/project/conda-packages/linux-64/libnvinfer-headers-python-plugin-dev-10.15.1.29-cuda129_0.conda "$HOME"/project/conda-packages/linux-64/tensorrt-dev-10.15.1.29-cuda129_0.conda "$HOME"/project/conda-packages/linux-64/tensorrt-10.15.1.29-cuda129_0.conda'
+wsl.exe bash -ic "mamba run -n base python -m conda_index ~/project/conda-packages"
+wsl.exe bash -ic "cd /mnt/c/Users/TYTY/Libraries/conda-packages/tensorrt/recipe/ && mamba run -n base rattler-build build --package-format conda:max --no-include-recipe -r recipe.yaml -m variants.yaml -m variants.linux.yaml -c conda-forge --output-dir ~/project/conda-packages --skip-existing local"
 ```
 
 If both platforms need repair, rebuild Windows first and start Linux after Windows is clearly healthy.
@@ -102,6 +102,7 @@ Check all packages, not just the ones that failed visibly.
 
 - `copy` or `cp` cannot find files under `%SRC_DIR%` or `$TRT_LIB_DIR`: inspect the relevant `src_cache` under `recipe/output` for Windows or `~/project/conda-packages` for Linux, then update the recipe to match the real layout.
 - `No license files were copied`: the upstream license filename or casing changed.
-- `mamba run` under WSL errors on `--live-stream`: use `wsl.exe bash -ic` to run `rattler-build` from the recipe dir without `--live-stream`.
+- `mamba run` under WSL errors on `--live-stream`: use `wsl.exe bash -ic` to run `mamba run -n base rattler-build` from the recipe dir without `--live-stream`.
+- WSL package counts from PowerShell look wrong: use a simple single-quoted WSL command such as `wsl.exe bash -lc 'ls -1 "$HOME"/project/conda-packages/linux-64/*.conda 2>/dev/null | wc -l'`.
 - Windows and Linux builds interfere in a shared `bld` directory: keep Windows in `recipe/output` and Linux in `~/project/conda-packages`, and do not overlap first-attempt builds against the same output root.
 - A `.conda` file exists but tests failed afterward: delete that artifact, reindex, and rerun the target platform build.
